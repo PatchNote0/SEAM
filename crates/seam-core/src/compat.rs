@@ -142,9 +142,9 @@ pub fn fits(read: &Shape, written: &Shape) -> Fit {
             }
         }
         (Number, Integer) => Fit::Yes,
-        (Integer, Number) => {
-            Fit::No("a number may carry a fraction where an integer is expected".into())
-        }
+        // JSON has one number type and TypeScript has no integer type, so
+        // whether a written number carries a fraction is a run-time fact.
+        (Integer, Number) => Fit::Unknown,
         (Array { items: r }, Array { items: w }) => match fits(r, w) {
             Fit::No(why) => Fit::No(format!("array items differ: {why}")),
             other => other,
@@ -537,9 +537,11 @@ mod tests {
     }
 
     #[test]
-    fn integers_fit_numbers_but_numbers_do_not_fit_integers() {
+    fn integers_fit_numbers_and_numbers_into_integers_are_undecided() {
         assert_eq!(fits(&Shape::Number, &Shape::Integer), Fit::Yes);
-        assert!(matches!(fits(&Shape::Integer, &Shape::Number), Fit::No(_)));
+        // JSON has one number type and TypeScript no integer type: whether a
+        // written number carries a fraction is known only at run time.
+        assert_eq!(fits(&Shape::Integer, &Shape::Number), Fit::Unknown);
         assert!(matches!(fits(&Shape::String, &Shape::Boolean), Fit::No(_)));
         assert_eq!(fits(&Shape::Any, &Shape::Boolean), Fit::Unknown);
         assert_eq!(
@@ -699,11 +701,18 @@ mod tests {
 
     #[test]
     fn requests_flip_the_roles() {
-        let consumer = object("PaymentRequest", vec![field("account_id", Shape::Number)]);
+        let consumer = object(
+            "PaymentRequest",
+            vec![
+                field("account_id", Shape::String),
+                field("amount_cents", Shape::Number),
+            ],
+        );
         let producer = object(
             "PaymentIn",
             vec![
                 field("account_id", Shape::Integer),
+                field("amount_cents", Shape::Integer),
                 field("currency", Shape::String),
             ],
         );
@@ -721,13 +730,21 @@ mod tests {
             Severity::Breaking,
             Some("currency".into())
         )));
-        // The consumer sends `number`, the producer reads `integer`.
+        // The consumer sends `string`, the producer reads `integer`.
         assert!(
             found
                 .iter()
                 .any(|(k, _, f)| *k == FindingKind::TypeMismatch
                     && f.as_deref() == Some("account_id"))
         );
+        // A `number` sent where an `integer` is read is left undecided.
+        assert!(
+            !found
+                .iter()
+                .any(|(_, _, f)| f.as_deref() == Some("amount_cents"))
+        );
+        let amount = c.mappings.iter().find(|m| m.json_name == "amount_cents");
+        assert_eq!(amount.map(|m| m.status), Some(MappingStatus::Indeterminate));
     }
 
     #[test]

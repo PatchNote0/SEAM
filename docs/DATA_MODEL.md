@@ -83,7 +83,10 @@ required, whether it is nullable, and the source span that declared it.
 Lowering rules worth knowing:
 
 - TypeScript `field?: T` is optional; `T | null` is nullable; `T[]` and
-  `Array<T>` are arrays; `number` covers integer and number.
+  `Array<T>` are arrays; `number` covers integer and number. An integer
+  read where a `number` is written is left undecided rather than reported:
+  JSON has one number type, and whether a value carries a fraction is known
+  only at run time.
 - Python `Optional[T]` and `T | None` are nullable; `list[T]` and `List[T]`
   are arrays; Pydantic `Field(alias=...)` and `serialization_alias=...` change
   the JSON name; a field with a default is still present in a response.
