@@ -1,3 +1,9 @@
+<div align="center">
+
+**English** · [فارسی](README.fa.md)
+
+</div>
+
 # SEAM
 
 Evidence-first cross-language contract intelligence.
