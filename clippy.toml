@@ -1,0 +1,4 @@
+# Library code must not unwrap or expect (see Cargo.toml); tests may, because
+# a failed expectation there is the test failing.
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
