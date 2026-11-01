@@ -46,7 +46,7 @@ is the authoritative list.
 | `seam-adapters` | Per-file extraction. TypeScript and Python through tree-sitter, OpenAPI and Docker Compose through a spanned YAML/JSON reader built on tree-sitter. Each adapter publishes a capability declaration. | seam-core, tree-sitter and grammars |
 | `seam-analysis` | Discovery, parallel extraction, cancellation, progress, component detection, cross-file resolution, linking and assembly of Seams. | seam-core, seam-adapters, ignore, rayon |
 | `seam-storage` | SQLite schema, migrations, snapshots, lifecycle computation, ledger queries, evidence revalidation. | seam-core, rusqlite (bundled SQLite) |
-| `seam-cli` | The `seam` binary: argument parsing, terminal output, JSON output, exit codes, Ctrl-C cancellation. | all of the above, clap |
+| `seam-cli` | The `seam` binary: argument parsing, terminal output in English and Persian, JSON and Markdown reports, exit codes, Ctrl-C cancellation. | all of the above, clap, ctrlc |
 
 The brief proposed `seam-parser`, `seam-contracts`, `seam-evidence`,
 `seam-graph` and `seam-git` as separate crates. Today's split is narrower on
@@ -110,6 +110,8 @@ connections, does not execute anything from the analysed repository and has
 no telemetry. Details in [SECURITY.md](SECURITY.md).
 
 ## Not built yet
+
+Every stage of the pipeline above is built as of 0.1.0. These are not:
 
 - Incremental re-extraction using cached facts keyed by file hash (the hashes
   are already stored).

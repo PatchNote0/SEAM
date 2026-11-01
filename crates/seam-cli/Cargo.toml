@@ -1,0 +1,29 @@
+[package]
+name = "seam-cli"
+description = "The seam command: discover, prove and track the Seams between the parts of a system."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "seam"
+path = "src/main.rs"
+
+[dependencies]
+clap.workspace = true
+ctrlc.workspace = true
+seam-adapters.workspace = true
+seam-analysis.workspace = true
+seam-core.workspace = true
+seam-storage.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true
