@@ -1,0 +1,4 @@
+# Only the prebuilt binaries go into the image.
+*
+!dist
+!dist/**
