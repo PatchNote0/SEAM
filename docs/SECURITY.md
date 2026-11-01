@@ -32,6 +32,6 @@ The exclusion list is in `seam-analysis` and covered by tests.
 
 ## Reporting a vulnerability
 
-Report problems privately through GitHub's private vulnerability reporting
-on this repository (Security, Report a vulnerability) rather than in a
-public issue.
+Please report security problems privately rather than in a public issue:
+use the repository's Security tab (Report a vulnerability) when it is
+offered, or contact the maintainer through their GitHub profile.
