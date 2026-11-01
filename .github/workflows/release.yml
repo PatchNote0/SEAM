@@ -1,15 +1,26 @@
 name: Release
 
-# A tag such as v0.1.0 builds every target, publishes a GitHub Release with
-# the archives and their checksums, and pushes the container image. Running
-# the workflow by hand builds and tests the archives without publishing.
+# Publishing a release on GitHub with a new tag such as v0.1.0 (or pushing
+# that tag) builds every target, attaches the archives and their checksums to
+# the release, fills in its notes from CHANGELOG.md when they are empty, and
+# pushes the container image. Running the workflow by hand builds and tests
+# the archives without publishing anything.
 on:
   push:
     tags: ["v*.*.*"]
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
   contents: read
+
+# A release published from GitHub's page also creates its tag; whichever of
+# the two events runs second waits for the first and then finds nothing to do
+# but replace the same files.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   CARGO_TERM_COLOR: always
@@ -116,7 +127,15 @@ jobs:
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --title "SEAM $GITHUB_REF_NAME" --notes-file notes.md
+        run: |
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+            if [ -z "$(gh release view "$GITHUB_REF_NAME" --json body --jq .body)" ]; then
+              gh release edit "$GITHUB_REF_NAME" --title "SEAM $GITHUB_REF_NAME" --notes-file notes.md
+            fi
+          else
+            gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --title "SEAM $GITHUB_REF_NAME" --notes-file notes.md
+          fi
 
   container:
     name: Publish the container image
