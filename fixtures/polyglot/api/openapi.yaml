@@ -1,0 +1,112 @@
+openapi: 3.1.0
+info:
+  title: Ledgerline API
+  version: 2.3.0
+servers:
+  - url: http://api:8000
+paths:
+  /accounts/{account_id}:
+    get:
+      operationId: getAccount
+      tags: [accounts]
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: The account.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+        "404":
+          description: No such account.
+  /accounts/{account_id}/invoices:
+    get:
+      operationId: listInvoices
+      tags: [accounts]
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Invoices for the account, newest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Invoice"
+  /payments:
+    post:
+      operationId: createPayment
+      tags: [payments]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentRequest"
+      responses:
+        "201":
+          description: The payment was accepted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentReceipt"
+components:
+  schemas:
+    Account:
+      type: object
+      required: [id, email, display_name, created_at]
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        display_name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    Invoice:
+      type: object
+      required: [id, amount_cents, currency, issued_at, paid]
+      properties:
+        id:
+          type: integer
+        amount_cents:
+          type: integer
+        currency:
+          type: string
+        issued_at:
+          type: string
+          format: date-time
+        paid:
+          type: boolean
+    PaymentRequest:
+      type: object
+      required: [account_id, amount_cents, currency]
+      properties:
+        account_id:
+          type: integer
+        amount_cents:
+          type: integer
+        currency:
+          type: string
+    PaymentReceipt:
+      type: object
+      required: [paymentId, status]
+      properties:
+        paymentId:
+          type: string
+        status:
+          type: string
+        ledger_entry_id:
+          type: [integer, "null"]

@@ -1,0 +1,15 @@
+[package]
+name = "ledger"
+version = "0.9.2"
+edition = "2021"
+publish = false
+
+# This fixture is its own workspace so that the SEAM workspace above it is
+# never mistaken for its parent.
+[workspace]
+
+[dependencies]
+axum = "0.8"
+serde = { version = "1", features = ["derive"] }
+sqlx = { version = "0.8", features = ["postgres", "runtime-tokio"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

@@ -1,0 +1,14 @@
+[project]
+name = "ledgerline-api"
+version = "2.3.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "httpx>=0.28",
+    "psycopg[binary]>=3.2",
+    "pydantic>=2.9",
+    "uvicorn>=0.32",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8.3"]
