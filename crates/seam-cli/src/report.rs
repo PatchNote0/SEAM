@@ -108,6 +108,72 @@ fn html(text: &str) -> String {
         .replace('>', "&gt;")
 }
 
+fn is_persian(c: char) -> bool {
+    matches!(c, '\u{0600}'..='\u{06FF}' | '\u{FB50}'..='\u{FDFF}' | '\u{FE70}'..='\u{FEFF}' | '\u{200C}')
+}
+
+/// Wraps each run of Latin-script words in a Persian line in Unicode
+/// directional isolates, so routes, paths, names and dates keep their
+/// order inside right-to-left text. Trailing punctuation stays outside.
+fn isolate_latin(line: &str) -> String {
+    let tokens: Vec<&str> = line.split(' ').collect();
+    let latin =
+        |t: &str| !t.chars().any(is_persian) && t.chars().any(|c| c.is_ascii_alphanumeric());
+    let neutral =
+        |t: &str| !t.chars().any(is_persian) && !t.chars().any(|c| c.is_ascii_alphanumeric());
+    let mut out: Vec<String> = Vec::new();
+    let mut i = 0;
+    while i < tokens.len() {
+        let token = tokens[i];
+        let list_marker = i == 0
+            && token.ends_with('.')
+            && token[..token.len() - 1].chars().all(|c| c.is_ascii_digit());
+        if list_marker || !latin(token) {
+            out.push(token.to_owned());
+            i += 1;
+            continue;
+        }
+        // A run: Latin words, joined across neutral tokens such as `|` or `→`.
+        let mut end = i + 1;
+        let mut last_latin = i;
+        while end < tokens.len() && (latin(tokens[end]) || neutral(tokens[end])) {
+            if latin(tokens[end]) {
+                last_latin = end;
+            }
+            end += 1;
+        }
+        let run = tokens[i..=last_latin].join(" ");
+        let core = run.trim_end_matches(['.', ',', ':', ';', '،', '؛']);
+        out.push(format!("\u{2066}{core}\u{2069}{}", &run[core.len()..]));
+        out.extend(tokens[last_latin + 1..end].iter().map(|t| (*t).to_owned()));
+        i = end;
+    }
+    out.join(" ")
+}
+
+/// Applies [`isolate_latin`] to the prose of a Persian report, leaving
+/// HTML, tables and code untouched.
+fn isolate_report(text: &str) -> String {
+    let mut out = String::with_capacity(text.len() + text.len() / 8);
+    let mut in_pre = false;
+    for line in text.lines() {
+        let trimmed = line.trim_start();
+        if trimmed.starts_with("<pre") {
+            in_pre = !trimmed.contains("</pre>");
+            out.push_str(line);
+        } else if in_pre {
+            in_pre = !line.contains("</pre>");
+            out.push_str(line);
+        } else if trimmed.starts_with('<') || trimmed.starts_with('|') || trimmed.is_empty() {
+            out.push_str(line);
+        } else {
+            out.push_str(&isolate_latin(line));
+        }
+        out.push('\n');
+    }
+    out
+}
+
 fn cap(text: &str, fa: bool) -> String {
     if fa {
         return text.to_owned();
@@ -149,14 +215,21 @@ fn table(s: &mut String, t: &Text, title: &str, c: &Comparison) {
         t.l_contract(),
         cap(t.l_status(), fa)
     );
+    let iso = |text: String| {
+        if fa {
+            format!("\u{2066}{text}\u{2069}")
+        } else {
+            text
+        }
+    };
     for m in &c.mappings {
         let _ = writeln!(
             s,
-            "| `{}` | {} | {} | {} | {} |",
-            m.json_name,
-            cell(&field_type(m.consumer.as_ref())),
-            cell(&field_type(m.producer.as_ref())),
-            cell(&field_type(m.contract.as_ref())),
+            "| {} | {} | {} | {} | {} |",
+            iso(format!("`{}`", m.json_name)),
+            iso(cell(&field_type(m.consumer.as_ref()))),
+            iso(cell(&field_type(m.producer.as_ref()))),
+            iso(cell(&field_type(m.contract.as_ref()))),
             t.mapping(m.status)
         );
     }
@@ -306,7 +379,14 @@ pub fn markdown(
         if !seam.tests.is_empty() {
             let _ = writeln!(s, "**{}**\n", t.l_tests());
             for test in &seam.tests {
-                let _ = writeln!(s, "- {}: `{}`, {}", t.side(test.side), test.path, test.name);
+                let comma = if fa { "،" } else { "," };
+                let _ = writeln!(
+                    s,
+                    "- {}: `{}`{comma} {}",
+                    t.side(test.side),
+                    test.path,
+                    test.name
+                );
             }
             let _ = writeln!(s);
         }
@@ -319,9 +399,10 @@ pub fn markdown(
         for (i, e) in seam.evidence.iter().enumerate() {
             let _ = writeln!(
                 s,
-                "{}. {}, `{}:{}`: {}\n",
+                "{}. {}{} `{}:{}`: {}\n",
                 i + 1,
                 t.role(e.role),
+                if fa { "،" } else { "," },
                 e.span.path,
                 e.span.start.line,
                 t.sentence(&e.note)
@@ -345,6 +426,39 @@ pub fn markdown(
     }
     if fa {
         let _ = writeln!(s, "</div>");
+        return isolate_report(&s);
     }
     s
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn latin_runs_are_isolated_and_list_markers_kept() {
+        let line = "1. فراخوانی مصرف‌کننده، `web/src/api/accounts.ts:5`: fetchAccount تابع getJson را صدا می‌زند.";
+        let out = isolate_latin(line);
+        assert!(out.starts_with("1. "));
+        // The path and the name after it read left to right as one run.
+        assert!(
+            out.contains("\u{2066}`web/src/api/accounts.ts:5`: fetchAccount\u{2069}"),
+            "{out}"
+        );
+        assert!(out.contains("\u{2066}getJson\u{2069}"));
+        let heading = isolate_latin("## GET /accounts/{account_id} · تأییدشده (VERIFIED)");
+        assert!(
+            heading.starts_with("## \u{2066}GET /accounts/{account_id}\u{2069} ·"),
+            "{heading}"
+        );
+        let date = isolate_latin("ساخته‌شده در 2026-11-01T19:39:45Z از `/repo`.");
+        assert!(date.contains("\u{2066}2026-11-01T19:39:45Z\u{2069}"));
+        assert!(date.ends_with("\u{2069}."));
+    }
+
+    #[test]
+    fn code_and_tables_are_left_alone() {
+        let text = "<pre dir=\"ltr\"><code>fetch(`/a`)\nmore()</code></pre>\n| `id` | number |\n";
+        assert_eq!(isolate_report(text), text);
+    }
 }
