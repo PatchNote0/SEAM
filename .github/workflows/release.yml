@@ -1,23 +1,19 @@
 name: Release
 
-# Publishing a release on GitHub with a new tag such as v0.1.0 (or pushing
-# that tag) builds every target, attaches the archives and their checksums to
+# Publishing a release on GitHub with a new tag such as v0.1.0, or pushing
+# that tag, builds every target, attaches the archives and their checksums to
 # the release, fills in its notes from CHANGELOG.md when they are empty, and
-# pushes the container image. Running the workflow by hand builds and tests
-# the archives without publishing anything.
+# pushes the container image. A release published from GitHub's page creates
+# its tag, which is the event this workflow listens for. Running the workflow
+# by hand builds and tests the archives without publishing anything.
 on:
   push:
     tags: ["v*.*.*"]
-  release:
-    types: [published]
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# A release published from GitHub's page also creates its tag; whichever of
-# the two events runs second waits for the first and then finds nothing to do
-# but replace the same files.
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
