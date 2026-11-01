@@ -6,7 +6,7 @@ exclude = ["fixtures"]
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.88"
+rust-version = "1.90"
 publish = false
 repository = "https://github.com/PatchNote0/seam"
 license = "MIT OR Apache-2.0"

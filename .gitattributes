@@ -1,0 +1,7 @@
+# Keep line endings identical on every platform: evidence spans, excerpts and
+# content hashes are computed from the bytes on disk.
+* text=auto eol=lf
+*.png binary
+*.gif binary
+*.ico binary
+*.icns binary
